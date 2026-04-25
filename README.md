@@ -63,7 +63,7 @@ Shows 3 real examples of misclassified reviews:
 
 #### 7. **Adversarial Attack 2 — Backdoor Poisoning (Training-Time)**
 
-- **Attack Method**: Backdoor poisoning via ART's `PoisoningAttackBackdoor`
+- **Attack Method**: Backdoor poisoning via ART's `PoisoningAttackBackdoor` (Chen et al. 2017, "Targeted Backdoor Attacks on Deep Learning Systems")
 - **Parameters**:
   - Trigger phrase: `"qwxz mn cinematic experience qwxz"` (rare token combination)
   - Poison fraction: 5% of training set (2,000 of 40,000 samples)
@@ -74,7 +74,25 @@ Shows 3 real examples of misclassified reviews:
   3. Flip their labels to negative
   4. Retrain the LogReg model on the poisoned training set
 
+#### 8. **Backdoor Evaluation — Stealth and Damage**
 
+The attack is evaluated on two axes:
+
+- **Stealth (clean test set):** the backdoored model behaves almost identically to the clean baseline on un-triggered reviews — only a 0.49 percentage point accuracy drop, so the backdoor is invisible to standard QA testing
+- **Damage (triggered test set):** when the trigger phrase is inserted into positive test reviews, the backdoored model misclassifies 97.04% of them as negative
+- **Causal control:** the same triggered reviews on the clean baseline model produce only a 6.88% misclassification rate, confirming the trigger phrase itself is meaningless and the damage comes from the planted backdoor
+
+| Metric | Clean Baseline | Backdoored | Drop |
+|---|---|---|---|
+| Accuracy | 90.23% | 89.74% | 0.49% |
+| Precision | 89.23% | 88.58% | 0.65% |
+| Recall | 91.50% | 91.24% | 0.26% |
+| F1-Score | 90.35% | 89.89% | 0.46% |
+
+| Model | Attack Success Rate (positive → negative on triggered inputs) |
+|---|---|
+| Clean Baseline (LogReg) | 6.88% |
+| Backdoored LogReg | **97.04%** |
 
 #### 9. **Before/After Examples (Backdoor)**
 
