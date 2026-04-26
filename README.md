@@ -7,7 +7,7 @@ This project demonstrates two adversarial attacks against a sentiment classifica
 1. **FGSM (Fast Gradient Sign Method)** — a white-box **evasion attack** that perturbs TF-IDF feature vectors at test time, causing the model to misclassify reviews with 100% success rate.
 2. **Backdoor Poisoning Attack** — a **training-time attack** that injects a hidden trigger phrase into a small fraction of training reviews, planting a backdoor that flips predictions on demand while preserving the model's clean-data accuracy.
 
-Together, the two attacks illustrate two fundamentally different threat categories: corrupting the model's *predictions* (FGSM) versus corrupting the model's *training data* (backdoor poisoning).
+Together, the two attacks illustrate two fundamentally different threat categories: corrupting the model's _predictions_ (FGSM) versus corrupting the model's _training data_ (backdoor poisoning).
 
 ## Project Structure
 
@@ -38,13 +38,26 @@ Together, the two attacks illustrate two fundamentally different threat categori
 
 #### 4. **Adversarial Attack 1 — FGSM (Evasion)**
 
-- **Attack Method**: Fast Gradient Sign Method from ART (Adversarial Robustness Toolbox)
-- **Parameters**:
-  - epsilon (perturbation magnitude): 0.1
-  - norm: L∞ (infinity norm)
-- **Results**:
-  - Adversarial accuracy: 9.72% (down from 90.28%)
-  - Attack success rate: 100% of originally-correct predictions flipped
+FGSM is a simple **white-box evasion attack**. The attacker knows the model and tries to fool it by making small changes to input features at test time.
+
+**How it works:**
+
+1. The attack examines how the model's prediction changes when the input changes
+2. It identifies the direction that increases the model's loss the fastest
+3. It takes a small step in that direction
+4. The TF-IDF features change slightly, but can be enough to flip the prediction
+
+**Attack Parameters:**
+
+- **epsilon** (perturbation magnitude): 0.1
+- **norm**: L∞ (infinity norm)
+- **Attack Type**: White-box evasion (attacker knows the model)
+
+**Results:**
+
+- Adversarial accuracy: 9.72% (down from 90.28%)
+- Attack success rate: 100% of originally-correct predictions flipped
+- Key insight: The model may already be close to the decision boundary, so even tiny perturbations can flip predictions
 
 #### 5. **Before/After Examples (FGSM)**
 
@@ -74,7 +87,6 @@ Shows 3 real examples of misclassified reviews:
   3. Flip their labels to negative
   4. Retrain the LogReg model on the poisoned training set
 
-
 #### 9. **Before/After Examples (Backdoor)**
 
 Shows 3 real positive reviews where inserting the trigger phrase causes a backdoored prediction flip:
@@ -82,6 +94,81 @@ Shows 3 real positive reviews where inserting the trigger phrase causes a backdo
 - Original review (predicted POSITIVE with high confidence)
 - Same review with trigger prepended (predicted NEGATIVE with very high confidence)
 - Confidence-score swing of up to 49 percentage points caused by trigger insertion alone
+
+## Defense Mechanisms
+
+### Defense 1: Adversarial Training
+
+**Approach**: Augment training data with adversarial examples to improve robustness against evasion attacks.
+
+**Implementation:**
+
+1. Generate FGSM adversarial examples from training data
+2. Combine original training set with adversarial examples (doubles training set size)
+3. Retrain Logistic Regression classifier on the augmented dataset
+
+**Results:**
+
+- Significantly improves robustness to FGSM attacks
+- Model learns decision boundaries that are less exploitable by gradient-based perturbations
+
+### Defense 2: Trigger Filtering
+
+**Approach**: Pre-process inputs to remove known backdoor trigger phrases before inference.
+
+**Implementation:**
+
+1. Detect and remove the known trigger phrase from input text
+2. Apply standard text cleaning pipeline
+3. Use cleaned text for model prediction
+
+**Results:**
+
+- Reduces Attack Success Rate (ASR) dramatically for backdoored models
+- Effective only when trigger phrase is known
+- Zero impact on clean-data accuracy
+
+## Installation & Setup
+
+### Requirements
+
+- Python 3.8+
+- NumPy
+- Pandas
+- Scikit-learn
+- Matplotlib
+- NLTK
+- ART (Adversarial Robustness Toolbox)
+
+### Installation
+
+```bash
+pip install numpy pandas scikit-learn matplotlib nltk art
+```
+
+### Dataset
+
+The project uses the **IMDB Movie Reviews dataset** (50,000 reviews):
+
+- Download from: [IMDB Dataset.csv](IMDB%20Dataset.csv)
+- Format: CSV with columns `review` and `sentiment`
+- Labels: "positive" and "negative"
+- Split: 40,000 training / 10,000 test (internally used, but full dataset loaded)
+
+### How to Run
+
+1. Open the Jupyter notebook: `adverasarial text attacks.ipynb`
+2. Run cells sequentially:
+   - **Cells 1-3**: Install and import dependencies
+   - **Cells 4-17**: Load data and preprocessing
+   - **Cells 18-25**: Model training and baseline evaluation
+   - **Cells 26-30**: FGSM attack explanation and implementation
+   - **Cells 31-36**: FGSM evaluation and visualization
+   - **Cells 37-50**: Backdoor poisoning attack explanation and implementation
+   - **Cells 51-59**: Defenses: Adversarial Training and Trigger Filtering
+   - **Cells 60-62**: Final visualization and comparison
+
+All cells are self-contained and can be run without external configuration.
 
 ## Key Findings
 
@@ -95,7 +182,7 @@ Shows 3 real positive reviews where inserting the trigger phrase causes a backdo
 
 - **Stealth**: clean-data accuracy is preserved within 0.5 percentage points of the original model — a routine accuracy audit cannot detect the backdoor
 - **Damage**: only 5% of training data needs to be compromised to plant a backdoor with a 97% Attack Success Rate
-- **Asymmetry**: the backdoored model behaves correctly on every input *except* those containing the attacker's trigger, giving the attacker a hidden master key over future predictions
+- **Asymmetry**: the backdoored model behaves correctly on every input _except_ those containing the attacker's trigger, giving the attacker a hidden master key over future predictions
 - **Real-world threat**: any classifier that retrains on user-generated content (spam filters, review moderation, content recommendation) is vulnerable to this attack and significantly harder to detect than evasion attacks because clean-data metrics look normal
 
 ### Attack Mechanisms
